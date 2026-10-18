@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Build prices.json from the official NSE + BSE end-of-day Bhavcopy files.
+Build prices.json and stocks.json from the official NSE + BSE end-of-day Bhavcopy files.
+
+- prices.json: {symbol: close} for every listed equity (small, for price lookups).
+- stocks.json: [symbol, name, close] rows for every listed equity (for search).
 
 - NSE is the primary source; BSE fills in companies (by ISIN) not traded on NSE.
 - If one exchange's file can't be fetched, the other is used alone.
@@ -21,6 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 OUT_FILE = ROOT / "prices.json"
+STOCKS_FILE = ROOT / "stocks.json"
 COMPOSITES_FILE = ROOT / "config" / "composites.json"
 
 NSE_URL = "https://nsearchives.nseindia.com/content/cm/BhavCopy_NSE_CM_0_0_0_{d}_F_0000.csv.zip"
@@ -35,6 +39,9 @@ IST = timezone(timedelta(hours=5, minutes=30))
 # Bhavcopy files are normally out by ~18:00 IST; before that, start from the previous day.
 PUBLISH_HOUR_IST = 18
 LOOKBACK_DAYS = 10
+# Fail the run (so GitHub emails a failure) if the newest file found is older than this.
+# Covers weekends plus a couple of exchange holidays.
+MAX_STALE_DAYS = 6
 
 # Preferred NSE series when a symbol trades in more than one.
 NSE_SERIES_PRIORITY = ["EQ", "BE", "BZ", "SM", "ST"]
@@ -64,45 +71,61 @@ def try_fetch(fetcher, day, label):
         return None
 
 
+def is_equity_isin(isin):
+    # Indian ISIN: 'INE' + 4-char issuer + 2-digit security type + ... ; type '01' = equity shares.
+    # Excludes bonds/NCDs (07), InvITs (23), rights entitlements (20), etc.
+    return len(isin) == 12 and isin.startswith("INE") and isin[7:9] == "01"
+
+
+def tidy_name(name):
+    # Exchange names are kept in their original case (title-casing mangles acronyms like ITC).
+    return " ".join(name.split()).rstrip(" -")
+
+
 def equity_rows(text):
-    """Yield (symbol, isin, series, close) for company equity rows (ISIN 'INE...')."""
+    """Yield (symbol, isin, series, name, close) for company equity share rows."""
     for r in csv.DictReader(io.StringIO(text)):
         isin = r.get("ISIN", "")
-        if r.get("FinInstrmTp") != "STK" or not isin.startswith("INE"):
+        if r.get("FinInstrmTp") != "STK" or not is_equity_isin(isin):
             continue
         try:
             close = float(r["ClsPric"])
         except (KeyError, ValueError):
             continue
         if close > 0:
-            yield r["TckrSymb"].strip(), isin, r.get("SctySrs", "").strip(), close
+            yield (r["TckrSymb"].strip(), isin, r.get("SctySrs", "").strip(),
+                   tidy_name(r.get("FinInstrmNm", "")), close)
 
 
-def build_prices(nse_text, bse_text):
-    prices = {}
+def build_stocks(nse_text, bse_text):
+    """Return {symbol: (name, close)}."""
+    stocks = {}
     seen_isins = set()
+    # Both exchanges truncate names (to different lengths); keep the longer one per ISIN.
+    bse_names = {isin: name for _, isin, _, name, _ in equity_rows(bse_text)} if bse_text else {}
 
     if nse_text:
-        best = {}  # symbol -> (priority, isin, close)
-        for sym, isin, series, close in equity_rows(nse_text):
+        best = {}  # symbol -> (priority, isin, name, close)
+        for sym, isin, series, name, close in equity_rows(nse_text):
             if series not in NSE_SERIES_PRIORITY:
                 continue
             rank = NSE_SERIES_PRIORITY.index(series)
             if sym not in best or rank < best[sym][0]:
-                best[sym] = (rank, isin, close)
-        for sym, (_, isin, close) in best.items():
-            prices[sym] = round(close, 2)
+                best[sym] = (rank, isin, name, close)
+        for sym, (_, isin, name, close) in best.items():
+            name = max(name, bse_names.get(isin, ""), key=len)
+            stocks[sym] = (name, round(close, 2))
             seen_isins.add(isin)
 
     if bse_text:
-        for sym, isin, _, close in equity_rows(bse_text):
+        for sym, isin, _, name, close in equity_rows(bse_text):
             # Only companies NSE didn't cover, and never overwrite an NSE ticker.
-            if isin in seen_isins or sym in prices:
+            if isin in seen_isins or sym in stocks:
                 continue
-            prices[sym] = round(close, 2)
+            stocks[sym] = (name, round(close, 2))
             seen_isins.add(isin)
 
-    return prices
+    return stocks
 
 
 def apply_composites(prices):
@@ -143,27 +166,39 @@ def main():
         return 1
 
     as_of = day.isoformat()
+    if (now.date() - day).days > MAX_STALE_DAYS:
+        print(f"Newest Bhavcopy is from {as_of}, more than {MAX_STALE_DAYS} days old.", file=sys.stderr)
+        return 1
     previous = current_as_of()
     if previous and previous >= as_of:
         print(f"prices.json already at {previous}; nothing to do.")
         return 0
 
-    prices = build_prices(nse_text, bse_text)
-    if len(prices) < 1000:  # a sane full-market file has thousands of rows
-        print(f"Only {len(prices)} prices parsed; refusing to publish.", file=sys.stderr)
+    stocks = build_stocks(nse_text, bse_text)
+    if len(stocks) < 1000:  # a sane full-market file has thousands of rows
+        print(f"Only {len(stocks)} stocks parsed; refusing to publish.", file=sys.stderr)
         return 1
+    prices = {sym: close for sym, (_, close) in stocks.items()}
     apply_composites(prices)
 
-    payload = {
+    meta = {
         "asOf": as_of,
         "sources": [s for s, t in (("NSE", nse_text), ("BSE", bse_text)) if t],
         "generatedAt": now.isoformat(timespec="seconds"),
-        "count": len(prices),
-        "prices": dict(sorted(prices.items())),
     }
-    OUT_FILE.write_text(json.dumps(payload, separators=(",", ":")) + "\n")
-    print(f"Wrote {len(prices)} prices as of {as_of} from {payload['sources']}.")
+    write_json(OUT_FILE, {**meta, "count": len(prices), "prices": dict(sorted(prices.items()))})
+    write_json(STOCKS_FILE, {
+        **meta,
+        "count": len(stocks),
+        "fields": ["symbol", "name", "price"],
+        "stocks": [[sym, name, close] for sym, (name, close) in sorted(stocks.items())],
+    })
+    print(f"Wrote {len(prices)} prices / {len(stocks)} stocks as of {as_of} from {meta['sources']}.")
     return 0
+
+
+def write_json(path, payload):
+    path.write_text(json.dumps(payload, separators=(",", ":"), ensure_ascii=False) + "\n")
 
 
 if __name__ == "__main__":
