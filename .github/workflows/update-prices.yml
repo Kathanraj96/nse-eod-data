@@ -1,0 +1,35 @@
+name: Update EOD prices
+
+on:
+  schedule:
+    - cron: "30 13 * * 1-5"  # 19:00 IST, after Bhavcopy is published
+    - cron: "30 16 * * 1-5"  # 22:00 IST, retry in case the exchange was late
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-prices
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch Bhavcopy and build prices.json
+        run: python3 fetch_prices.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add prices.json
+          if git diff --cached --quiet; then
+            echo "No change."
+            exit 0
+          fi
+          git commit -m "data: EOD prices $(python3 -c 'import json;print(json.load(open("prices.json"))["asOf"])')"
+          git push
