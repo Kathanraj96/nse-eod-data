@@ -1,0 +1,24 @@
+name: Watch corporate-action history
+
+on:
+  schedule:
+    - cron: "30 2 * * 1"  # Mondays 08:00 IST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install curl_cffi
+        run: pip install curl_cffi
+
+      - name: Check curated stocks and open issues for changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 watch_history.py

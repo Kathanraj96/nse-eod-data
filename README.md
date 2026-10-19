@@ -59,6 +59,20 @@ Run locally:
 python3 fetch_prices.py
 ```
 
+## History watch
+
+[.github/workflows/watch-history.yml](.github/workflows/watch-history.yml) runs weekly (Mondays, 08:00 IST)
+and runs [watch_history.py](watch_history.py). It only looks at the stocks in
+[config/curated.json](config/curated.json), the ones with a hand-checked bonus/split history on the
+calculator. It flags, as GitHub issues titled `[history] ...`:
+
+- bonus, split, consolidation, merger, demerger or capital-reduction announcements (NSE corporate actions, 3 weeks back to 3 months ahead)
+- name and symbol changes
+- curated symbols that no longer have a price (delisted, merged or renamed)
+
+It never edits data. A person reviews each issue and updates the calculator. Keep
+`config/curated.json` in step with the calculator when stocks are added.
+
 ## Disclaimer
 
 Data is sourced from publicly available exchange files and is provided as-is, for
