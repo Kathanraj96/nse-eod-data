@@ -3,11 +3,13 @@
 Build prices.json and stocks.json from the official NSE + BSE end-of-day Bhavcopy files.
 
 - prices.json: {symbol: close} for every listed equity (small, for price lookups).
-- stocks.json: [symbol, name, close] rows for every listed equity (for search).
+- stocks.json: [symbol, name, close, formerNames] rows for every listed equity (for search).
 
 - NSE is the primary source; BSE fills in companies (by ISIN) not traded on NSE.
 - If one exchange's file can't be fetched, the other is used alone.
 - Composite symbols (e.g. demergers) are summed from their parts, see config/composites.json.
+- Former company names come from NSE's name-change list, so old certificates can be searched
+  by the name printed on them.
 - Exits 0 without touching prices.json when there is no newer trading day.
 
 Standard library only, so it runs on a bare GitHub Actions runner.
@@ -29,6 +31,8 @@ COMPOSITES_FILE = ROOT / "config" / "composites.json"
 
 NSE_URL = "https://nsearchives.nseindia.com/content/cm/BhavCopy_NSE_CM_0_0_0_{d}_F_0000.csv.zip"
 BSE_URL = "https://www.bseindia.com/download/BhavCopy/Equity/BhavCopy_BSE_CM_0_0_0_{d}_F_0000.CSV"
+NAME_CHANGE_URL = "https://nsearchives.nseindia.com/content/equities/namechange.csv"
+SYMBOL_CHANGE_URL = "https://nsearchives.nseindia.com/content/equities/symbolchange.csv"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
                   "(KHTML, like Gecko) Chrome/120.0 Safari/537.36",
@@ -128,6 +132,71 @@ def build_stocks(nse_text, bse_text):
     return stocks
 
 
+def parse_nse_date(text):
+    return datetime.strptime(text.strip(), "%d-%b-%Y").date()
+
+
+def fetch_former_names():
+    """Return {current symbol: [former names, oldest first]} from NSE's change lists."""
+    names_text = http_get(NAME_CHANGE_URL).decode("utf-8", "replace")
+    symbols_text = http_get(SYMBOL_CHANGE_URL).decode("utf-8", "replace")
+
+    symbol_changes = {}  # old symbol -> [(date, new symbol)]
+    for r in csv.reader(io.StringIO(symbols_text)):
+        try:
+            old, new, when = r[1].strip(), r[2].strip(), parse_nse_date(r[3])
+        except (IndexError, ValueError):
+            continue  # header or malformed row
+        symbol_changes.setdefault(old, []).append((when, new))
+
+    def current_symbol(sym, since):
+        # Follow later symbol changes; symbols are sometimes reused, so respect dates.
+        for _ in range(10):
+            later = sorted(c for c in symbol_changes.get(sym, []) if c[0] >= since)
+            if not later:
+                break
+            since, sym = later[0]
+        return sym
+
+    former = {}
+    for r in csv.reader(io.StringIO(names_text)):
+        try:
+            sym, old_name, when = r[0].strip(), tidy_name(r[1]), parse_nse_date(r[3])
+        except (IndexError, ValueError):
+            continue
+        if old_name:
+            former.setdefault(current_symbol(sym, when), {}).setdefault(old_name, when)
+    return {sym: sorted(names, key=names.get) for sym, names in former.items()}
+
+
+def previous_former_names():
+    try:
+        rows = json.loads(STOCKS_FILE.read_text())["stocks"]
+        return {r[0]: r[3] for r in rows if len(r) > 3 and r[3]}
+    except (FileNotFoundError, ValueError, KeyError):
+        return {}
+
+
+def with_former_names(stocks):
+    """Return {symbol: (name, close, [former names])}."""
+    try:
+        former = fetch_former_names()
+    except Exception as exc:
+        # Not worth failing the price update over; keep yesterday's names instead.
+        print(f"  NSE name-change list unavailable ({exc}); reusing previous former names.")
+        former = previous_former_names()
+    result = {}
+    for sym, (name, close) in stocks.items():
+        seen = {name.lower()}
+        names = []
+        for n in former.get(sym, []):
+            if n.lower() not in seen:
+                seen.add(n.lower())
+                names.append(n)
+        result[sym] = (name, close, names)
+    return result
+
+
 def apply_composites(prices):
     if not COMPOSITES_FILE.exists():
         return
@@ -180,6 +249,7 @@ def main():
         return 1
     prices = {sym: close for sym, (_, close) in stocks.items()}
     apply_composites(prices)
+    stocks = with_former_names(stocks)
 
     meta = {
         "asOf": as_of,
@@ -190,8 +260,9 @@ def main():
     write_json(STOCKS_FILE, {
         **meta,
         "count": len(stocks),
-        "fields": ["symbol", "name", "price"],
-        "stocks": [[sym, name, close] for sym, (name, close) in sorted(stocks.items())],
+        "fields": ["symbol", "name", "price", "formerNames"],
+        "stocks": [[sym, name, close, *([former] if former else [])]
+                   for sym, (name, close, former) in sorted(stocks.items())],
     })
     print(f"Wrote {len(prices)} prices / {len(stocks)} stocks as of {as_of} from {meta['sources']}.")
     return 0

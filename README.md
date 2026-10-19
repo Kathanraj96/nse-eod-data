@@ -8,7 +8,7 @@ NSE and BSE Bhavcopy files and published as JSON.
 | File | Contents | Size (gzip) |
 | --- | --- | --- |
 | [`prices.json`](https://raw.githubusercontent.com/Kathanraj96/nse-eod-data/main/prices.json) | `{symbol: close}` for price lookups | ~36 KB |
-| [`stocks.json`](https://raw.githubusercontent.com/Kathanraj96/nse-eod-data/main/stocks.json) | `[symbol, name, close]` rows for search | ~82 KB |
+| [`stocks.json`](https://raw.githubusercontent.com/Kathanraj96/nse-eod-data/main/stocks.json) | `[symbol, name, close, formerNames]` rows for search | ~86 KB |
 
 Only equity shares are included. ISIN security type `01` excludes bonds, NCDs, InvITs and
 rights entitlements.
@@ -33,8 +33,15 @@ rights entitlements.
 `stocks.json` uses the same `asOf`/`sources`/`generatedAt` fields, plus:
 
 ```json
-{ "fields": ["symbol", "name", "price"], "stocks": [["RELIANCE", "RELIANCE INDUSTRIES LTD.", 1211.2]] }
+{ "fields": ["symbol", "name", "price", "formerNames"],
+  "stocks": [["RELIANCE", "RELIANCE INDUSTRIES LTD.", 1211.2],
+             ["ZEEL", "ZEE ENTERTAINMENT ENTERPRISES", 98.4, ["Zee Telefilms Ltd"]]] }
 ```
+
+`formerNames` (oldest first) appears only when the company has changed its name. It comes from NSE's
+[name-change](https://nsearchives.nseindia.com/content/equities/namechange.csv) list, which covers
+renames from about 2000 onwards. Symbols that have changed since a rename are followed through
+NSE's symbol-change list. If NSE's lists can't be fetched, the previous day's names are kept.
 
 ## How it updates
 
