@@ -1,6 +1,28 @@
 {
   "TATAMOTORS": {
-    "parts": ["TMPV", "TMCV"],
+    "parts": [
+      "TMPV",
+      "TMCV"
+    ],
     "note": "Oct 2025 demerger: each Tata Motors share became 1 TMPV (passenger vehicles, same ISIN) + 1 TMCV (commercial vehicles)."
+  },
+  "GUJGASLTD": {
+    "parts": [
+      "GUJENERGY",
+      "GSPLTRANS"
+    ],
+    "ratio": {
+      "GSPLTRANS": 0.3333
+    },
+    "note": "Jul 2026: renamed Gujarat Energy (GUJENERGY); demerger gave 1 GSPL Transmission share per 3 held."
+  },
+  "JBCHEPHARM": {
+    "parts": [
+      "TORNTPHARM"
+    ],
+    "ratio": {
+      "TORNTPHARM": 0.51
+    },
+    "note": "Jul 2026: merged into Torrent Pharmaceuticals, 51 Torrent shares per 100 JB Chemicals shares."
   }
 }
