@@ -24,5 +24,14 @@
       "TORNTPHARM": 0.51
     },
     "note": "Jul 2026: merged into Torrent Pharmaceuticals, 51 Torrent shares per 100 JB Chemicals shares."
+  },
+  "GRAPHITEOLD": {
+    "parts": [
+      "GRAPHITE"
+    ],
+    "ratio": {
+      "GRAPHITE": 1.4
+    },
+    "note": "Jun 2002: old Graphite India Ltd (BSE 509590) merged into Carbon Everflow, now Graphite India (GRAPHITE), 14 new shares per 10 old."
   }
 }
