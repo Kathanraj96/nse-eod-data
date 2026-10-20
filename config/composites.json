@@ -33,5 +33,44 @@
       "GRAPHITE": 1.4
     },
     "note": "Jun 2002: old Graphite India Ltd (BSE 509590) merged into Carbon Everflow, now Graphite India (GRAPHITE), 14 new shares per 10 old."
+  },
+  "TATAMETALI": {
+    "parts": [
+      "TATASTEEL"
+    ],
+    "ratio": {
+      "TATASTEEL": 7.9
+    },
+    "note": "Feb 2024: Tata Metaliks (BSE 513434) merged into Tata Steel, 79 Tata Steel shares per 10 Tata Metaliks shares."
+  },
+  "VIKRANTTYR": {
+    "parts": [
+      "JKTYRE"
+    ],
+    "ratio": {
+      "JKTYRE": 0.4
+    },
+    "note": "2003: Vikrant Tyres (BSE 509301) merged into JK Industries (now JK Tyre), 2 JK shares per 5 Vikrant shares; price is per pre-2014-split JK share (the site applies the 2014 split to quantity)."
+  },
+  "GUJGASOLD": {
+    "parts": [
+      "GUJENERGY",
+      "GSPLTRANS"
+    ],
+    "ratio": {
+      "GSPLTRANS": 0.3333
+    },
+    "note": "2015: old Gujarat Gas Company (BSE 523477) merged 1:1 into Gujarat Gas Ltd (GUJGASLTD); priced like GUJGASLTD (rename + 2026 GTL demerger). The site applies the 2019 split to quantity."
+  },
+  "ZANDUPHARM": {
+    "parts": [
+      "EMAMILTD",
+      "EMAMIREAL"
+    ],
+    "ratio": {
+      "EMAMILTD": 84,
+      "EMAMIREAL": 7
+    },
+    "note": "Zandu Pharmaceutical Works (BSE 506720): 2009 FMCG demerger gave 14 Emami shares per Zandu share (84 after Emami's 2010 split and 2013/2018 bonuses); Zandu Realty merged into Emami Infrastructure (now Emami Realty) in 2018, 7 shares per share."
   }
 }
