@@ -72,5 +72,50 @@
       "EMAMIREAL": 7
     },
     "note": "Zandu Pharmaceutical Works (BSE 506720): 2009 FMCG demerger gave 14 Emami shares per Zandu share (84 after Emami's 2010 split and 2013/2018 bonuses); Zandu Realty merged into Emami Infrastructure (now Emami Realty) in 2018, 7 shares per share."
+  },
+  "GSKCONS": {
+    "parts": [
+      "HINDUNILVR"
+    ],
+    "ratio": {
+      "HINDUNILVR": 4.39
+    },
+    "note": "Apr 2020: GlaxoSmithKline Consumer Healthcare (BSE 500676) merged into Hindustan Unilever, 439 HUL shares per 100 GSKCH shares."
+  },
+  "RANBAXY": {
+    "parts": [
+      "SUNPHARMA"
+    ],
+    "ratio": {
+      "SUNPHARMA": 0.8
+    },
+    "note": "2015: Ranbaxy Laboratories (BSE 500359) merged into Sun Pharma, 4 Sun shares per 5 Ranbaxy shares."
+  },
+  "TATACOFFEE": {
+    "parts": [
+      "TATACONSUM"
+    ],
+    "ratio": {
+      "TATACONSUM": 0.3
+    },
+    "note": "Jan 2024: Tata Coffee (BSE 532301) merged into Tata Consumer Products, 3 TCPL shares per 10 Tata Coffee shares."
+  },
+  "ITCBHADRA": {
+    "parts": [
+      "ITC"
+    ],
+    "ratio": {
+      "ITC": 2.8125
+    },
+    "note": "2002: ITC Bhadrachalam Paperboards (BSE 500340) merged into ITC, 1 ITC share per 16; 45/16 after ITC's 2005 split and 2005/2010/2016 bonuses."
+  },
+  "STERLITE": {
+    "parts": [
+      "VEDL"
+    ],
+    "ratio": {
+      "VEDL": 0.6
+    },
+    "note": "Aug 2013: Sterlite Industries (BSE 500900) merged into Sesa Goa (now Vedanta), 3 shares per 5."
   }
 }
