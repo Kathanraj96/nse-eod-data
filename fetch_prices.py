@@ -64,7 +64,11 @@ def fetch_nse(day):
 
 
 def fetch_bse(day):
-    return http_get(BSE_URL.format(d=day.strftime("%Y%m%d"))).decode("utf-8")
+    text = http_get(BSE_URL.format(d=day.strftime("%Y%m%d"))).decode("utf-8", "replace")
+    # On holidays BSE answers 200 with its HTML home page instead of a 404.
+    if not text.lstrip("﻿").startswith("TradDt,"):
+        raise ValueError("not a Bhavcopy CSV")
+    return text
 
 
 def try_fetch(fetcher, day, label):
