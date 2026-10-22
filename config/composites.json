@@ -117,5 +117,14 @@
       "VEDL": 0.6
     },
     "note": "Aug 2013: Sterlite Industries (BSE 500900) merged into Sesa Goa (now Vedanta), 3 shares per 5."
+  },
+  "INDAL": {
+    "parts": [
+      "HINDALCO"
+    ],
+    "ratio": {
+      "HINDALCO": 1.428571
+    },
+    "note": "Mar 2005: Indian Aluminium (BSE 500445) merged into Hindalco, 1 share per 7; 10/7 after Hindalco's 2005 split."
   }
 }
